@@ -333,7 +333,8 @@ function animate() {
 // Generar N círculos y comenzar la animación
 generateCircles(10); // Puedes cambiar el número de círculos aquí
 animate();*/
-const canvas = document.getElementById("canvas");
+
+/*const canvas = document.getElementById("canvas");
 let ctx = canvas.getContext("2d");
 
 // Obtiene las dimensiones de la pantalla actual
@@ -471,4 +472,148 @@ canvas.addEventListener("click", (event) => {
 });
 
 generateCircles(10);
+animate();*/
+
+const canvas = document.getElementById("canvas");
+let ctx = canvas.getContext("2d");
+
+// Obtiene las dimensiones de la pantalla actual
+const window_height = window.innerHeight;
+const window_width = window.innerWidth;
+canvas.height = window_height;
+canvas.width = window_width;
+canvas.style.background = "#ff8";
+
+const margin = 10; // Espacio pequeño para evitar que los círculos toquen los márgenes
+
+class Circle {
+    constructor(x, y, radius, color, text, speed) {
+        this.posX = x;
+        this.posY = y;
+        this.radius = radius;
+        this.color = color;
+        this.originalColor = color;
+        this.text = text;
+        this.speed = speed;
+        this.dx = 0; // Movimiento solo en Y, así que dx = 0
+        this.dy = (Math.random() < 0.5 ? -1 : 1) * this.speed; // Dirección aleatoria hacia arriba o abajo
+        this.isShrinking = false;
+        this.flashFrames = 0;
+    }
+
+    draw(context) {
+        context.beginPath();
+        context.strokeStyle = this.color;
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.font = "20px Arial";
+        context.fillText(this.text, this.posX, this.posY);
+        context.lineWidth = 2;
+        context.arc(this.posX, this.posY, this.radius, 0, Math.PI * 2, false);
+        context.stroke();
+        context.closePath();
+    }
+
+    update(context) {
+        if (this.isShrinking && this.radius > 0) {
+            this.radius -= 2;
+        }
+        if (this.radius <= 0) return;
+
+        this.draw(context);
+        this.posY += this.dy; // Movimiento solo en Y
+
+        // Rebote en los bordes superior e inferior con margen
+        if (this.posY + this.radius > window_height - margin || this.posY - this.radius < margin) {
+            this.dy = -this.dy; // Invertir dirección al tocar el margen
+        }
+        
+        if (this.flashFrames > 0) {
+            this.flashFrames--;
+            if (this.flashFrames === 0) {
+                this.color = this.originalColor; // Restaurar color original tras el parpadeo
+            }
+        }
+    }
+
+    isColliding(otherCircle) {
+        const distX = this.posX - otherCircle.posX;
+        const distY = this.posY - otherCircle.posY;
+        const distance = Math.sqrt(distX * distX + distY * distY);
+        return distance < this.radius + otherCircle.radius;
+    }
+
+    startFlash() {
+        this.color = "#0000FF"; // Cambiar color a azul oscuro
+        this.flashFrames = 5; // Duración del parpadeo
+    }
+
+    reverseDirection() {
+        this.dy = -this.dy; // Invertir la dirección en Y
+    }
+
+    isClicked(mouseX, mouseY) {
+        const distX = mouseX - this.posX;
+        const distY = mouseY - this.posY;
+        const distance = Math.sqrt(distX * distX + distY * distY);
+        return distance <= this.radius;
+    }
+}
+
+let circles = [];
+
+function generateCircles(n) {
+    for (let i = 0; i < n; i++) {
+        let radius = Math.random() * 30 + 20;
+        let x = Math.random() * (window_width - radius * 2) + radius;
+        let y = Math.random() * (window_height - radius * 2) + radius;
+        let color = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
+        let speed = Math.random() * 2 + 1;
+        let text = `C${i + 1}`;
+        circles.push(new Circle(x, y, radius, color, text, speed));
+    }
+}
+
+function detectCollisions() {
+    for (let i = 0; i < circles.length; i++) {
+        for (let j = i + 1; j < circles.length; j++) {
+            if (circles[i].isColliding(circles[j])) {
+                // Iniciar el parpadeo en ambos círculos al colisionar
+                circles[i].startFlash();
+                circles[j].startFlash();
+                
+                // Invertir la dirección de ambos círculos en Y para simular rebote
+                circles[i].reverseDirection();
+                circles[j].reverseDirection();
+            }
+        }
+    }
+}
+
+function animate() {
+    ctx.clearRect(0, 0, window_width, window_height);
+    circles.forEach((circle, index) => {
+        circle.update(ctx);
+        if (circle.radius <= 0) {
+            circles.splice(index, 1); // Eliminar círculo cuando desaparece completamente
+        }
+    });
+    detectCollisions();
+    requestAnimationFrame(animate);
+}
+
+// Evento de clic en el canvas para iniciar el efecto de reducción en el círculo
+canvas.addEventListener("click", (event) => {
+    const mouseX = event.clientX;
+    const mouseY = event.clientY;
+    circles.forEach(circle => {
+        if (circle.isClicked(mouseX, mouseY)) {
+            circle.isShrinking = true;
+        }
+    });
+});
+
+generateCircles(10);
 animate();
+
+
